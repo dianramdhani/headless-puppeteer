@@ -11,6 +11,7 @@ export default class Processor {
 
   constructor(
     private config: {
+      env: 'dev' | 'prod'
       url: string
       chromePath: string
       browserType: 'head' | 'headless'
@@ -35,8 +36,10 @@ export default class Processor {
     } catch (error) {
       console.error(error)
     } finally {
-      await this.page?.close()
-      await this.browser?.close()
+      if (this.config.env === 'prod') {
+        await this.page?.close()
+        await this.browser?.close()
+      }
     }
   }
 

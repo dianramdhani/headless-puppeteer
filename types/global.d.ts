@@ -1,6 +1,7 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
+      ENV: 'dev' | 'prod'
       URL: string
       URL_PAGES: string
       CHROME_PATH: string

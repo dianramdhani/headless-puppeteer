@@ -3,11 +3,12 @@ import Processor from './processor'
 import { env } from 'node:process'
 import { readdir } from 'node:fs/promises'
 
-const { URL, CHROME_PATH, BROWSER_TYPE, URL_PAGES, MODE } = env
+const { URL, CHROME_PATH, BROWSER_TYPE, URL_PAGES, MODE, ENV } = env
 
 switch (MODE) {
   case 'grab_cookies':
     new Processor({
+      env: ENV,
       url: URL,
       chromePath: CHROME_PATH,
       browserType: BROWSER_TYPE,
@@ -24,6 +25,7 @@ async function main() {
 
   filesName.forEach(async (fileName) =>
     new Processor({
+      env: ENV,
       url: URL,
       chromePath: CHROME_PATH,
       browserType: BROWSER_TYPE,
