@@ -1,19 +1,12 @@
 import 'dotenv/config'
-import { join } from 'path'
-import puppeteer from 'puppeteer-core'
+import Processor from './processor'
+import { env } from 'node:process'
 
-const { URL } = process.env
-main()
-
-async function main() {
-  const browser = await puppeteer.launch({
-    executablePath: join(
-      __dirname,
-      'chrome/linux-120.0.6099.71/chrome-linux64/chrome'
-    ),
-    headless: false,
-    defaultViewport: null,
-  })
-  const page = await browser.newPage()
-  await page.goto(URL)
-}
+const { URL, CHROME_PATH, BROWSER_TYPE } = env
+const processor = new Processor({
+  url: URL,
+  chromePath: CHROME_PATH,
+  browserType: BROWSER_TYPE,
+  mode: 'grab_cookies',
+})
+processor.process()
