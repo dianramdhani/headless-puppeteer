@@ -1,9 +1,18 @@
 import puppeteer from 'puppeteer-extra'
 import pluginStealth from 'puppeteer-extra-plugin-stealth'
+import winston, { format } from 'winston'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { stdin } from 'node:process'
 import { join } from 'path'
 import type { Browser, Page, Protocol } from 'puppeteer-core'
+
+const logger = winston.createLogger({
+  format: format.combine(format.timestamp(), format.prettyPrint()),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+  ],
+})
 
 export default class Processor {
   private page?: Page
@@ -35,6 +44,7 @@ export default class Processor {
       }
     } catch (error) {
       console.error(error)
+      logger.error(`gagal ${this.config.mode}`, error)
     } finally {
       if (this.config.env === 'prod') {
         await this.page?.close()
@@ -83,6 +93,7 @@ export default class Processor {
         JSON.stringify(cookies),
         'utf8'
       )
+      logger.info(`${fileName} berhasil grab cookies`)
     } catch (error) {
       throw new Error('gagal grab cookies')
     }
@@ -98,6 +109,9 @@ export default class Processor {
 
       await this.page?.setCookie(...cookies)
       await this.page?.reload({ waitUntil: 'domcontentloaded' })
+      logger.info(
+        `${this.config.fileName.replace('.json', '')} berhasil auto login`
+      )
     } catch (error) {
       throw new Error('gagal auto login')
     }
