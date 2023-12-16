@@ -100,18 +100,17 @@ export default class Processor {
   }
 
   private async autoLogin() {
-    try {
-      if (!this.config.fileName) throw new Error('fileName unset')
+    if (!this.config.fileName) throw new Error('fileName unset')
+    const name = this.config.fileName.replace('.json', '')
 
+    try {
       const cookies = JSON.parse(
         (await readFile(`cookies/${this.config.fileName}`)).toString()
       ) as Protocol.Network.CookieParam[]
 
       await this.page?.setCookie(...cookies)
       await this.page?.reload({ waitUntil: 'domcontentloaded' })
-      logger.info(
-        `${this.config.fileName.replace('.json', '')} berhasil auto login`
-      )
+      logger.info(`${name} berhasil auto login`)
     } catch (error) {
       throw new Error('gagal auto login')
     }
@@ -122,6 +121,11 @@ export default class Processor {
       for (const urlPage of this.config.urlPages) {
         await this.page?.goto(urlPage, { waitUntil: 'domcontentloaded' })
       }
+      await mkdir('ss', { recursive: true })
+      this.config.env === 'dev' &&
+        (await this.page?.screenshot({
+          path: `./ss/${new Date().getTime()}-${name}.jpg`,
+        }))
     } catch (error) {
       throw error
     }
