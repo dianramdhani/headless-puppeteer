@@ -1,0 +1,20 @@
+{
+  "name": "headless-puppeteer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node --files index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^20.10.4",
+    "cron": "^3.1.6",
+    "dotenv": "^16.3.1",
+    "path": "^0.12.7",
+    "puppeteer-core": "^21.6.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
