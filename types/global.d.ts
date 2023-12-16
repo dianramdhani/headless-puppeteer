@@ -7,6 +7,7 @@ declare global {
       CHROME_PATH: string
       BROWSER_TYPE: 'head' | 'headless'
       MODE: 'grab_cookies' | 'auto_login'
+      TIME_LOGIN: string
     }
   }
 }
