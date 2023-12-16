@@ -23,6 +23,7 @@ export default class Processor {
   async process() {
     try {
       await this.initialize()
+
       switch (this.config.mode) {
         case 'grab_cookies':
           await this.grabCookies()
@@ -72,6 +73,7 @@ export default class Processor {
       })
       const fileName = await input
       const cookies = await this.page?.cookies()
+
       await mkdir('cookies', { recursive: true })
       await writeFile(
         `cookies/${fileName}.json`,
@@ -86,9 +88,11 @@ export default class Processor {
   private async autoLogin() {
     try {
       if (!this.config.fileName) throw new Error('fileName unset')
+
       const cookies = JSON.parse(
         (await readFile(`cookies/${this.config.fileName}`)).toString()
       ) as Protocol.Network.CookieParam[]
+
       await this.page?.setCookie(...cookies)
       await this.page?.reload({ waitUntil: 'domcontentloaded' })
     } catch (error) {
@@ -97,6 +101,7 @@ export default class Processor {
 
     try {
       if (!this.config.urlPages) throw new Error('no url pages')
+
       for (const urlPage of this.config.urlPages) {
         await this.page?.goto(urlPage, { waitUntil: 'domcontentloaded' })
       }

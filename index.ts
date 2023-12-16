@@ -3,14 +3,21 @@ import Processor from './processor'
 import { env } from 'node:process'
 import { readdir } from 'node:fs/promises'
 
-const { URL, CHROME_PATH, BROWSER_TYPE, URL_PAGES } = env
-new Processor({
-  url: URL,
-  chromePath: CHROME_PATH,
-  browserType: BROWSER_TYPE,
-  mode: 'grab_cookies',
-}).process()
-// main()
+const { URL, CHROME_PATH, BROWSER_TYPE, URL_PAGES, MODE } = env
+
+switch (MODE) {
+  case 'grab_cookies':
+    new Processor({
+      url: URL,
+      chromePath: CHROME_PATH,
+      browserType: BROWSER_TYPE,
+      mode: MODE,
+    }).process()
+    break
+  case 'auto_login':
+    main()
+    break
+}
 
 async function main() {
   const filesName = await readdir('cookies')
