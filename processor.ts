@@ -57,6 +57,7 @@ export default class Processor {
     try {
       puppeteer.use(pluginStealth())
       this.browser = await puppeteer.launch({
+        arguments: ['--no-sandbox'],
         executablePath: join(__dirname, this.config.chromePath),
         ...(this.config.browserType === 'head'
           ? {
@@ -69,9 +70,14 @@ export default class Processor {
             }),
       })
       this.page = await this.browser?.newPage()
-      await this.page?.goto(this.config.url, { waitUntil: 'domcontentloaded' })
     } catch (error) {
       throw new Error('gagal initialize')
+    }
+
+    try {
+      await this.page?.goto(this.config.url, { waitUntil: 'domcontentloaded' })
+    } catch (error) {
+      console.warn('kelamaan')
     }
   }
 
@@ -109,13 +115,13 @@ export default class Processor {
       ) as Protocol.Network.CookieParam[]
 
       await this.page?.setCookie(...cookies)
-      await this.page?.reload({ waitUntil: 'domcontentloaded' })
       logger.info(`${name} berhasil auto login`)
     } catch (error) {
       throw new Error('gagal auto login')
     }
 
     try {
+      await this.page?.reload({ waitUntil: 'domcontentloaded' })
       if (!this.config.urlPages) throw new Error('no url pages')
 
       for (const urlPage of this.config.urlPages) {
@@ -127,7 +133,7 @@ export default class Processor {
           path: `./ss/${new Date().getTime()}-${name}.jpg`,
         }))
     } catch (error) {
-      throw error
+      console.warn('menuju page kelamaan')
     }
   }
 }
