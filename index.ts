@@ -24,8 +24,8 @@ switch (MODE) {
       onTick: async () => {
         const filesName = await readdir('cookies')
 
-        filesName.forEach(async (fileName) =>
-          new Processor({
+        for (const fileName of filesName) {
+          await new Processor({
             env: ENV,
             url: URL,
             chromePath: CHROME_PATH,
@@ -34,7 +34,7 @@ switch (MODE) {
             fileName,
             urlPages,
           }).process()
-        )
+        }
       },
       start: true,
       timeZone: 'Asia/Jakarta',

@@ -77,7 +77,7 @@ export default class Processor {
     try {
       await this.page?.goto(this.config.url, { waitUntil: 'domcontentloaded' })
     } catch (error) {
-      console.warn('kelamaan')
+      console.warn('open url kelamaan')
     }
   }
 
@@ -133,7 +133,7 @@ export default class Processor {
           path: `./ss/${new Date().getTime()}-${name}.jpg`,
         }))
     } catch (error) {
-      console.warn('menuju page kelamaan')
+      console.warn('open pages kelamaan')
     }
   }
 }
