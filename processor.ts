@@ -1,10 +1,10 @@
 import puppeteer from 'puppeteer-extra'
 import pluginStealth from 'puppeteer-extra-plugin-stealth'
 import winston, { format } from 'winston'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { stdin } from 'node:process'
 import { join } from 'path'
-import type { Browser, Page, Protocol } from 'puppeteer-core'
+import type { Browser, Page, Protocol } from 'puppeteer'
 
 const logger = winston.createLogger({
   format: format.combine(format.timestamp(), format.prettyPrint()),
@@ -15,50 +15,88 @@ const logger = winston.createLogger({
 })
 
 export default class Processor {
-  private page?: Page
-  private browser?: Browser
+  page?: Page
+  browser?: Browser
 
   constructor(
-    private config: {
-      env: 'dev' | 'prod'
+    private readonly config: {
       url: string
-      chromePath: string
-      browserType: 'head' | 'headless'
-      mode: 'grab_cookies' | 'auto_login'
-      fileName?: string
-      urlPages?: string[]
+      browserType: typeof process.env.BROWSER_TYPE
+      chromePath?: string
     }
   ) {}
 
-  async process() {
+  async grabCookies() {
     try {
       await this.initialize()
-
-      switch (this.config.mode) {
-        case 'grab_cookies':
-          await this.grabCookies()
-          break
-        case 'auto_login':
-          await this.autoLogin()
-          break
-      }
+      await this.page?.goto(this.config.url, { waitUntil: 'domcontentloaded' })
+      const input = new Promise<string>((resolve) => {
+        console.info('Please enter cookies name')
+        stdin.on('data', (data) => {
+          resolve(data.toString().trim())
+          stdin.pause()
+        })
+      })
+      const fileName = await input
+      const cookies = await this.page?.cookies()
+      await mkdir('cookies', { recursive: true })
+      await writeFile(
+        `cookies/${fileName}.json`,
+        JSON.stringify(cookies),
+        'utf8'
+      )
+      logger.info(`${fileName} berhasil grab cookies`)
     } catch (error) {
-      console.error(error)
-      logger.error(`gagal ${this.config.mode}`, error)
+      throw new Error('gagal grab cookies')
     } finally {
-      if (this.config.env === 'prod') {
-        await this.page?.close()
-        await this.browser?.close()
+      await this.closeBrowser()
+    }
+  }
+
+  async autoLogin(urlPages: string[], autoClose: boolean = true) {
+    const filesName = await readdir('cookies')
+    for (const fileName of filesName) {
+      const name = fileName.replace('.json', '')
+      const processor = new Processor(this.config)
+
+      try {
+        await processor.initialize()
+        const cookies = JSON.parse(
+          (await readFile(`cookies/${fileName}`)).toString()
+        ) as Protocol.Network.CookieParam[]
+        await processor.page?.setCookie(...cookies)
+        logger.info(`${name} berhasil auto login`)
+
+        try {
+          await processor.page?.goto(this.config.url, {
+            waitUntil: 'domcontentloaded',
+          })
+          for (const urlPage of urlPages) {
+            await processor.page?.goto(urlPage, {
+              waitUntil: 'domcontentloaded',
+            })
+          }
+          await mkdir('ss', { recursive: true })
+          await processor.page?.screenshot({
+            path: `./ss/${new Date().getTime()}-${name}.jpg`,
+          })
+        } catch (error) {}
+      } catch (error) {
+        logger.error(`${name} gagal auto login`)
+      } finally {
+        autoClose && (await processor.closeBrowser())
       }
     }
   }
 
-  private async initialize() {
+  async initialize() {
     try {
       puppeteer.use(pluginStealth())
       this.browser = await puppeteer.launch({
-        arguments: ['--no-sandbox'],
-        executablePath: join(__dirname, this.config.chromePath),
+        args: ['--no-sandbox'],
+        executablePath: this.config.chromePath
+          ? join(__dirname, this.config.chromePath)
+          : undefined,
         ...(this.config.browserType === 'head'
           ? {
               headless: false,
@@ -73,67 +111,10 @@ export default class Processor {
     } catch (error) {
       throw new Error('gagal initialize')
     }
-
-    try {
-      await this.page?.goto(this.config.url, { waitUntil: 'domcontentloaded' })
-    } catch (error) {
-      console.warn('open url kelamaan')
-    }
   }
 
-  private async grabCookies() {
-    try {
-      const input = new Promise<string>((resolve) => {
-        console.info('Please enter cookies name')
-        stdin.on('data', (data) => {
-          resolve(data.toString().trim())
-          stdin.pause()
-        })
-      })
-      const fileName = await input
-      const cookies = await this.page?.cookies()
-
-      await mkdir('cookies', { recursive: true })
-      await writeFile(
-        `cookies/${fileName}.json`,
-        JSON.stringify(cookies),
-        'utf8'
-      )
-      logger.info(`${fileName} berhasil grab cookies`)
-    } catch (error) {
-      throw new Error('gagal grab cookies')
-    }
-  }
-
-  private async autoLogin() {
-    if (!this.config.fileName) throw new Error('fileName unset')
-    const name = this.config.fileName.replace('.json', '')
-
-    try {
-      const cookies = JSON.parse(
-        (await readFile(`cookies/${this.config.fileName}`)).toString()
-      ) as Protocol.Network.CookieParam[]
-
-      await this.page?.setCookie(...cookies)
-      logger.info(`${name} berhasil auto login`)
-    } catch (error) {
-      throw new Error('gagal auto login')
-    }
-
-    try {
-      await this.page?.reload({ waitUntil: 'domcontentloaded' })
-      if (!this.config.urlPages) throw new Error('no url pages')
-
-      for (const urlPage of this.config.urlPages) {
-        await this.page?.goto(urlPage, { waitUntil: 'domcontentloaded' })
-      }
-      await mkdir('ss', { recursive: true })
-      this.config.env === 'dev' &&
-        (await this.page?.screenshot({
-          path: `./ss/${new Date().getTime()}-${name}.jpg`,
-        }))
-    } catch (error) {
-      console.warn('open pages kelamaan')
-    }
+  async closeBrowser() {
+    await this.page?.close()
+    await this.browser?.close()
   }
 }
