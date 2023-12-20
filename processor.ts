@@ -155,7 +155,6 @@ export default class Processor {
               try {
                 await response.json()
                 this.coInstances[index].headers = response.request().headers()
-                console.info(`${name} headers updated`)
               } catch (error) {}
             }
           })
@@ -182,7 +181,7 @@ export default class Processor {
         } catch (error) {}
 
         await processor.page?.evaluate(
-          async (urlQuery, headers) => {
+          async (urlQuery, headers, name) => {
             try {
               const addressID = await fetch(urlQuery, {
                 method: 'POST',
@@ -202,12 +201,13 @@ export default class Processor {
               })
 
               addressID
-                ? console.log(`~addressID ${addressID}`)
+                ? console.log(`~addressID-${name} ${addressID}`)
                 : console.log('~error gak ada address id')
             } catch (error) {}
           },
           urlQuery,
-          this.coInstances[index].headers
+          this.coInstances[index].headers,
+          name
         )
       })
     } catch (error) {

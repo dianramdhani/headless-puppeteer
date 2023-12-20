@@ -11,6 +11,7 @@
   "dependencies": {
     "@types/node": "^20.10.4",
     "cron": "^3.1.6",
+    "date-fns": "^3.0.1",
     "dotenv": "^16.3.1",
     "path": "^0.12.7",
     "puppeteer": "^21.6.1",

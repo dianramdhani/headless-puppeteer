@@ -2,6 +2,7 @@ import 'dotenv/config'
 import Processor from './processor'
 import { env } from 'node:process'
 import { CronJob } from 'cron'
+import { set, subMinutes } from 'date-fns'
 ;(async () => {
   const {
     URL,
@@ -16,8 +17,22 @@ import { CronJob } from 'cron'
     CRON_TIME,
     CO_ACCOUNTS,
   } = env
-  const [hour, minute] = CRON_TIME.split(':')
+  const [hours, minutes] = CRON_TIME.split(':')
   const isProd = ENV === 'prod'
+
+  console.info({
+    URL,
+    URL_PAGES,
+    URL_CART,
+    URL_QUERY,
+    URL_LIST_CO,
+    CHROME_PATH,
+    BROWSER_TYPE,
+    MODE,
+    ENV,
+    CRON_TIME,
+    CO_ACCOUNTS,
+  })
 
   switch (MODE) {
     case 'grab_cookies':
@@ -33,7 +48,7 @@ import { CronJob } from 'cron'
 
       isProd
         ? CronJob.from({
-            cronTime: `${minute} ${hour} * * *`,
+            cronTime: `${minutes} ${hours} * * *`,
             onTick: () =>
               new Processor({
                 url: URL,
@@ -58,15 +73,32 @@ import { CronJob } from 'cron'
         chromePath: CHROME_PATH,
       })
 
-      await processor.prepareCheckout(coAccounts, URL_QUERY)
-      isProd
-        ? CronJob.from({
-            cronTime: `${minute} ${hour} * * *`,
-            onTick: () => processor.checkout(URL_QUERY, URL_LIST_CO, isProd),
-            start: true,
-            timeZone: 'Asia/Jakarta',
-          })
-        : processor.checkout(URL_QUERY, URL_LIST_CO, isProd)
+      if (isProd) {
+        const timePrepare = subMinutes(
+          set(new Date(), {
+            hours: +hours,
+            minutes: +minutes,
+          }),
+          5
+        )
+
+        CronJob.from({
+          cronTime: `${timePrepare.getMinutes()} ${timePrepare.getHours()} * * *`,
+          onTick: () => processor.prepareCheckout(coAccounts, URL_QUERY),
+          start: true,
+          timeZone: 'Asia/Jakarta',
+        })
+
+        CronJob.from({
+          cronTime: `${minutes} ${hours} * * *`,
+          onTick: () => processor.checkout(URL_QUERY, URL_LIST_CO, isProd),
+          start: true,
+          timeZone: 'Asia/Jakarta',
+        })
+      } else {
+        await processor.prepareCheckout(coAccounts, URL_QUERY)
+        processor.checkout(URL_QUERY, URL_LIST_CO, isProd)
+      }
       break
   }
 })()
