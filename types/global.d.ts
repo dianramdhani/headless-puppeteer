@@ -3,9 +3,10 @@ declare global {
     interface ProcessEnv {
       ENV: 'dev' | 'prod'
       URL: string
+      URL_PAGES: string
       URL_CART: string
       URL_QUERY: string
-      URL_PAGES: string
+      URL_LIST_CO: string
       CHROME_PATH?: string
       CO_ACCOUNTS: string
       BROWSER_TYPE: 'head' | 'headless'

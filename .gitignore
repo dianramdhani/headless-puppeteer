@@ -2,5 +2,5 @@ node_modules
 chrome
 cookies
 .env
-*.log
 ss
+logs
