@@ -54,7 +54,7 @@ export default class Processor {
       })
       this.page = await this.browser?.newPage()
     } catch (error) {
-      throw new Error('gagal initialize')
+      throw new Error('gagal initialize', { cause: error })
     }
   }
 
@@ -84,7 +84,7 @@ export default class Processor {
       )
       logger.info(`${fileName} berhasil grab cookies`)
     } catch (error) {
-      throw new Error('gagal grab cookies')
+      throw new Error('gagal grab cookies', { cause: error })
     } finally {
       await this.closeBrowser()
     }
@@ -98,9 +98,8 @@ export default class Processor {
 
       try {
         await processor.initialize()
-        const cookies = JSON.parse(
-          (await readFile(`cookies/${fileName}`)).toString()
-        ) as Protocol.Network.CookieParam[]
+        const cookies = (await import(`cookies/${fileName}`))
+          .default as Protocol.Network.CookieParam[]
         await processor.page?.setCookie(...cookies)
         logger.info(`${name} berhasil auto login`)
 
@@ -132,9 +131,8 @@ export default class Processor {
         coAccounts.map<Promise<COInstance>>(async (name) => {
           const processor = new Processor(this.config)
           await processor.initialize()
-          const cookies = JSON.parse(
-            (await readFile(`cookies/${name}.json`)).toString()
-          ) as Protocol.Network.CookieParam[]
+          const cookies = (await import(`./cookies/${name}.json`))
+            .default as Protocol.Network.CookieParam[]
           await processor.page?.setCookie(...cookies)
 
           return {
@@ -211,7 +209,9 @@ export default class Processor {
         )
       })
     } catch (error) {
-      throw new Error('gagal prepare checkout coba cek cookies')
+      throw new Error('gagal prepare checkout coba cek cookies', {
+        cause: error,
+      })
     }
   }
 
