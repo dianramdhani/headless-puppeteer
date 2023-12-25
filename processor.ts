@@ -1,9 +1,10 @@
 import puppeteer from 'puppeteer-extra'
 import pluginStealth from 'puppeteer-extra-plugin-stealth'
+import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
 import winston, { format } from 'winston'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, writeFile } from 'node:fs/promises'
 import { stdin } from 'node:process'
-import { join } from 'path'
+import { resolve } from 'node:path'
 import type { Browser, Page, Protocol } from 'puppeteer'
 
 const logger = winston.createLogger({
@@ -40,7 +41,7 @@ export default class Processor {
       this.browser = await puppeteer.launch({
         args: ['--no-sandbox'],
         executablePath: this.config.chromePath
-          ? join(__dirname, this.config.chromePath)
+          ? resolve(__dirname, this.config.chromePath)
           : undefined,
         ...(this.config.browserType === 'head'
           ? {
@@ -90,14 +91,22 @@ export default class Processor {
     }
   }
 
-  async autoGrabCookies(grabCookiesAccounts: string[], password: string) {
+  async autoGrabCookies(
+    grabCookiesAccounts: string[],
+    password: string,
+    urlPages: string[] = []
+  ) {
     for (const account of grabCookiesAccounts) {
       try {
+        puppeteer.use(
+          blockResourcesPlugin({
+            blockedTypes: new Set(['media', 'stylesheet', 'image']),
+          })
+        )
         const processor = new Processor(this.config)
         await processor.initialize()
-        await processor.page?.goto(this.config.url, {
-          waitUntil: 'domcontentloaded',
-        })
+        await processor.page?.setRequestInterception(true)
+        await processor.page?.goto(this.config.url)
         ;(async () => {
           try {
             const buttonIgnoreGetNotification =
@@ -107,15 +116,20 @@ export default class Processor {
             await buttonIgnoreGetNotification?.click()
           } catch (error) {}
         })()
-        await processor.page?.type('[name="username"]', account)
+        await processor.page
+          ?.waitForSelector('[name="username"]')
+          .then((el) => el?.type(account, { delay: 50 }))
         await processor.page
           ?.waitForSelector('[name="password"]')
-          .then((el) => el?.type(password))
+          .then((el) => el?.type(password, { delay: 50 }))
         await processor.page?.click('#remember-me')
         await processor.page?.click('form button')
-        await processor.page?.waitForNavigation({
-          waitUntil: 'domcontentloaded',
-        })
+        await processor.page?.waitForNavigation({ waitUntil: 'networkidle0' })
+        for (const urlPage of urlPages) {
+          await processor.page?.goto(urlPage, {
+            waitUntil: 'domcontentloaded',
+          })
+        }
         const cookies = await processor.page?.cookies()
         await mkdir('cookies', { recursive: true })
         await writeFile(
@@ -125,6 +139,7 @@ export default class Processor {
         )
         await processor.closeBrowser()
         logger.info(`${account} berhasil grab cookies`)
+        console.info(`${account} berhasil grab cookies`)
       } catch (error) {
         logger.error(`${account} gagal grab cookies`, { cause: error })
       }
@@ -139,10 +154,9 @@ export default class Processor {
 
       try {
         await processor.initialize()
-        const cookies = (await import(`cookies/${fileName}`))
+        const cookies = (await import(`./cookies/${fileName}`))
           .default as Protocol.Network.CookieParam[]
         await processor.page?.setCookie(...cookies)
-        logger.info(`${name} berhasil auto login`)
 
         try {
           await processor.page?.goto(this.config.url, {
@@ -153,11 +167,9 @@ export default class Processor {
               waitUntil: 'domcontentloaded',
             })
           }
-          await mkdir('ss', { recursive: true })
-          processor.page?.screenshot({
-            path: `./ss/${Date.now()}-${name}.jpg`,
-          })
         } catch (error) {}
+        logger.info(`${name} berhasil auto login`)
+        console.info(`${name} berhasil auto login`)
       } catch (error) {
         logger.error(`${name} gagal auto login`)
       } finally {
@@ -374,6 +386,7 @@ export default class Processor {
           try {
             await processor.page?.goto(urlListCO)
             await processor.page?.waitForSelector('#orders-item-0')
+            await mkdir('ss', { recursive: true })
             await processor.page?.screenshot({
               path: `./ss/${Date.now()}-${name}-co.jpg`,
             })

@@ -22,6 +22,7 @@ import { set, subMinutes } from 'date-fns'
   } = env
   const [hours, minutes] = CRON_TIME.split(':')
   const isProd = ENV === 'prod'
+  const urlPages = URL_PAGES.split(' ')
 
   console.info({
     CHROME_PATH,
@@ -43,16 +44,30 @@ import { set, subMinutes } from 'date-fns'
       break
 
     case 'auto_grab_cookies':
-      new Processor({
-        url: URL_PAGE_LOGIN,
-        browserType: BROWSER_TYPE,
-        chromePath: CHROME_PATH,
-      }).autoGrabCookies(GRAB_COOKIES_ACCOUNTS.split(' '), PASSWORD)
+      isProd
+        ? CronJob.from({
+            cronTime: `${minutes} ${hours} * * *`,
+            onTick: () =>
+              new Processor({
+                url: URL_PAGE_LOGIN,
+                browserType: BROWSER_TYPE,
+                chromePath: CHROME_PATH,
+              }).autoGrabCookies(
+                GRAB_COOKIES_ACCOUNTS.split(' '),
+                PASSWORD,
+                urlPages
+              ),
+            start: true,
+            timeZone: 'Asia/Jakarta',
+          })
+        : new Processor({
+            url: URL_PAGE_LOGIN,
+            browserType: BROWSER_TYPE,
+            chromePath: CHROME_PATH,
+          }).autoGrabCookies(GRAB_COOKIES_ACCOUNTS.split(' '), PASSWORD)
       break
 
     case 'auto_login':
-      const urlPages = URL_PAGES.split(' ')
-
       isProd
         ? CronJob.from({
             cronTime: `${minutes} ${hours} * * *`,
@@ -69,7 +84,7 @@ import { set, subMinutes } from 'date-fns'
             url: URL,
             browserType: BROWSER_TYPE,
             chromePath: CHROME_PATH,
-          }).autoLogin(urlPages, false)
+          }).autoLogin(urlPages)
       break
 
     case 'auto_co':
