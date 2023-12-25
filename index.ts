@@ -6,6 +6,7 @@ import { set, subMinutes } from 'date-fns'
 ;(async () => {
   const {
     URL,
+    URL_PAGE_LOGIN,
     URL_PAGES,
     URL_CART,
     URL_QUERY,
@@ -16,22 +17,20 @@ import { set, subMinutes } from 'date-fns'
     ENV,
     CRON_TIME,
     CO_ACCOUNTS,
+    GRAB_COOKIES_ACCOUNTS,
+    PASSWORD,
   } = env
   const [hours, minutes] = CRON_TIME.split(':')
   const isProd = ENV === 'prod'
 
   console.info({
-    URL,
-    URL_PAGES,
-    URL_CART,
-    URL_QUERY,
-    URL_LIST_CO,
     CHROME_PATH,
     BROWSER_TYPE,
     MODE,
     ENV,
     CRON_TIME,
     CO_ACCOUNTS,
+    GRAB_COOKIES_ACCOUNTS,
   })
 
   switch (MODE) {
@@ -41,6 +40,14 @@ import { set, subMinutes } from 'date-fns'
         browserType: BROWSER_TYPE,
         chromePath: CHROME_PATH,
       }).grabCookies()
+      break
+
+    case 'auto_grab_cookies':
+      new Processor({
+        url: URL_PAGE_LOGIN,
+        browserType: BROWSER_TYPE,
+        chromePath: CHROME_PATH,
+      }).autoGrabCookies(GRAB_COOKIES_ACCOUNTS.split(' '), PASSWORD)
       break
 
     case 'auto_login':

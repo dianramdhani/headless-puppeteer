@@ -90,6 +90,47 @@ export default class Processor {
     }
   }
 
+  async autoGrabCookies(grabCookiesAccounts: string[], password: string) {
+    for (const account of grabCookiesAccounts) {
+      try {
+        const processor = new Processor(this.config)
+        await processor.initialize()
+        await processor.page?.goto(this.config.url, {
+          waitUntil: 'domcontentloaded',
+        })
+        ;(async () => {
+          try {
+            const buttonIgnoreGetNotification =
+              await processor.page?.waitForSelector(
+                '#desktopBannerWrapped button'
+              )
+            await buttonIgnoreGetNotification?.click()
+          } catch (error) {}
+        })()
+        await processor.page?.type('[name="username"]', account)
+        await processor.page
+          ?.waitForSelector('[name="password"]')
+          .then((el) => el?.type(password))
+        await processor.page?.click('#remember-me')
+        await processor.page?.click('form button')
+        await processor.page?.waitForNavigation({
+          waitUntil: 'domcontentloaded',
+        })
+        const cookies = await processor.page?.cookies()
+        await mkdir('cookies', { recursive: true })
+        await writeFile(
+          `cookies/${account}.json`,
+          JSON.stringify(cookies),
+          'utf8'
+        )
+        await processor.closeBrowser()
+        logger.info(`${account} berhasil grab cookies`)
+      } catch (error) {
+        logger.error(`${account} gagal grab cookies`, { cause: error })
+      }
+    }
+  }
+
   async autoLogin(urlPages: string[], autoClose: boolean = true) {
     const filesName = await readdir('cookies')
     for (const fileName of filesName) {
